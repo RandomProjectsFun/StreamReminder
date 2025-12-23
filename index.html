@@ -4,39 +4,316 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Streak Alarm 🔥</title>
+  <meta name="theme-color" content="#0b0b12" />
   <style>
-    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 0; background: #0b0f19; color: #e9eefc; }
-    .wrap { max-width: 720px; margin: 0 auto; padding: 24px; }
-    .card { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.10); border-radius: 18px; padding: 18px; }
-    h1 { margin: 0 0 6px; font-size: 28px; }
-    p { margin: 0 0 16px; opacity: 0.9; }
-    .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 14px; }
-    button {
-      border: 0; border-radius: 16px; padding: 14px 12px; cursor: pointer;
-      background: rgba(255,255,255,0.12); color: #e9eefc; font-size: 16px; font-weight: 650;
-      transition: transform 0.06s ease, background 0.15s ease;
+    :root{
+      --bg:#070711;
+      --card: rgba(255,255,255,.06);
+      --border: rgba(255,255,255,.14);
+      --txt:#eef1ff;
+      --muted: rgba(238,241,255,.78);
+      --pink:#ff2bd6;
+      --cyan:#20f6ff;
+      --lime:#a6ff2e;
+      --shadow: 0 18px 60px rgba(0,0,0,.55);
+      --radius: 22px;
     }
-    button:active { transform: scale(0.98); }
-    button:hover { background: rgba(255,255,255,0.16); }
-    .small { font-size: 13px; opacity: 0.85; margin-top: 14px; line-height: 1.35; }
-    .toast { margin-top: 12px; padding: 10px 12px; border-radius: 12px; display: none; }
-    .ok { background: rgba(34,197,94,0.18); border: 1px solid rgba(34,197,94,0.35); }
-    .bad { background: rgba(239,68,68,0.18); border: 1px solid rgba(239,68,68,0.35); }
+
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      background: radial-gradient(1200px 700px at 10% 0%, rgba(255,43,214,.22), transparent 55%),
+                  radial-gradient(1000px 800px at 90% 10%, rgba(32,246,255,.22), transparent 55%),
+                  radial-gradient(900px 800px at 45% 100%, rgba(166,255,46,.14), transparent 55%),
+                  var(--bg);
+      color:var(--txt);
+      min-height:100vh;
+      overflow-x:hidden;
+    }
+
+    .grain:before{
+      content:"";
+      position:fixed; inset:-40%;
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='.35'/%3E%3C/svg%3E");
+      opacity:.08;
+      transform:rotate(8deg);
+      pointer-events:none;
+      animation: drift 10s linear infinite;
+    }
+    @keyframes drift{
+      0%{transform:translate3d(-2%, -2%, 0) rotate(8deg)}
+      100%{transform:translate3d(2%, 2%, 0) rotate(8deg)}
+    }
+
+    .wrap{max-width:980px; margin:0 auto; padding:22px}
+    .top{
+      display:flex; align-items:flex-end; justify-content:space-between; gap:12px; flex-wrap:wrap;
+      margin-bottom:14px;
+    }
+    .title{
+      font-size:30px; margin:0; letter-spacing:.2px;
+      text-shadow: 0 0 18px rgba(32,246,255,.25), 0 0 22px rgba(255,43,214,.16);
+      position:relative;
+    }
+    .title:after{
+      content:"";
+      position:absolute; left:0; right:0; bottom:-8px; height:2px;
+      background: linear-gradient(90deg, var(--cyan), transparent 35%, var(--pink));
+      opacity:.75; border-radius:999px;
+    }
+    .subtitle{ margin:10px 0 0; color:var(--muted); font-size:14px; }
+
+    .badgeRow{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+    .badge{
+      border:1px solid var(--border);
+      background: rgba(255,255,255,.05);
+      border-radius:999px;
+      padding:7px 10px;
+      font-size:12px;
+      color: var(--muted);
+      backdrop-filter: blur(10px);
+    }
+
+    .card{
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(12px);
+    }
+
+    .grid{
+      display:grid;
+      grid-template-columns: repeat(2, minmax(0,1fr));
+      gap: 10px;
+      margin-top: 12px;
+    }
+    @media (min-width:780px){
+      .grid{ grid-template-columns: repeat(5, minmax(0,1fr)); }
+    }
+
+    .btn{
+      width:100%;
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.08);
+      color: var(--txt);
+      padding: 14px 12px;
+      border-radius: 18px;
+      cursor:pointer;
+      font-weight: 800;
+      letter-spacing:.15px;
+      transition: transform .06s ease, background .15s ease, border-color .15s ease;
+      position:relative;
+      overflow:hidden;
+      text-align:left;
+    }
+    .btn:hover{ background: rgba(255,255,255,.11); border-color: rgba(255,255,255,.22); }
+    .btn:active{ transform: scale(.985); }
+    .btn .sub{ display:block; font-size:12px; font-weight:650; opacity:.75; margin-top:4px; }
+
+    .btn.selected{
+      border-color: rgba(32,246,255,.55);
+      box-shadow: 0 0 0 1px rgba(255,43,214,.25), 0 0 22px rgba(32,246,255,.18);
+      background: linear-gradient(135deg, rgba(32,246,255,.14), rgba(255,43,214,.12));
+    }
+
+    .compose{
+      margin-top: 14px;
+      padding: 14px;
+      border-radius: 18px;
+      border:1px dashed rgba(255,255,255,.18);
+      background: rgba(0,0,0,.18);
+    }
+    .composeHeader{
+      display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;
+      margin-bottom:10px;
+    }
+    .who{ font-weight:900; font-size:14px; }
+    .who span{
+      color: var(--cyan);
+      text-shadow: 0 0 14px rgba(32,246,255,.25);
+    }
+
+    textarea{
+      width:100%;
+      min-height: 86px;
+      resize: vertical;
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.06);
+      color: var(--txt);
+      padding: 12px 12px;
+      font-size: 14px;
+      outline:none;
+    }
+    textarea:focus{
+      border-color: rgba(255,43,214,.45);
+      box-shadow: 0 0 0 4px rgba(255,43,214,.10);
+    }
+
+    .row{
+      display:flex; gap:10px; margin-top:10px; flex-wrap:wrap;
+      align-items:center; justify-content:space-between;
+    }
+    .chipRow{ display:flex; flex-wrap:wrap; gap:8px; }
+    .chip{
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.06);
+      color: var(--muted);
+      border-radius: 999px;
+      padding: 8px 10px;
+      font-size: 12px;
+      cursor:pointer;
+      user-select:none;
+      transition: background .12s ease, border-color .12s ease, transform .06s ease;
+    }
+    .chip:hover{ background: rgba(255,255,255,.10); border-color: rgba(255,255,255,.22); }
+    .chip:active{ transform: scale(.985); }
+
+    .actions{ display:flex; gap:10px; flex-wrap:wrap; }
+    .send{
+      border:0;
+      border-radius: 16px;
+      padding: 12px 14px;
+      font-weight: 1000;
+      cursor:pointer;
+      color:#0b0b12;
+      background: linear-gradient(90deg, var(--cyan), var(--pink));
+      box-shadow: 0 12px 24px rgba(0,0,0,.35);
+    }
+    .send:active{ transform: scale(.985); }
+
+    .ghost{
+      border:1px solid rgba(255,255,255,.18);
+      border-radius: 16px;
+      padding: 12px 14px;
+      font-weight: 850;
+      cursor:pointer;
+      color: var(--txt);
+      background: rgba(255,255,255,.06);
+    }
+
+    .meta{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; color: var(--muted); font-size: 12px; }
+    .toast{
+      margin-top: 12px;
+      padding: 10px 12px;
+      border-radius: 14px;
+      display:none;
+      font-size: 13px;
+      border:1px solid rgba(255,255,255,.14);
+    }
+    .ok{ background: rgba(34,197,94,.16); border-color: rgba(34,197,94,.35); }
+    .bad{ background: rgba(239,68,68,.16); border-color: rgba(239,68,68,.35); }
+    .hint{ margin-top:10px; color: var(--muted); font-size: 12px; line-height: 1.35; }
+
+    .divider{
+      margin:16px 0 12px;
+      height:1px;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,.18), transparent);
+    }
+
+    .addRow{
+      display:grid;
+      grid-template-columns: 1fr 1fr .7fr auto;
+      gap:10px;
+      margin-top: 10px;
+    }
+    @media (max-width:780px){
+      .addRow{ grid-template-columns: 1fr 1fr; }
+      .addRow .span2{ grid-column: span 2; }
+    }
+    input{
+      width:100%;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.06);
+      color: var(--txt);
+      padding: 12px 12px;
+      font-size: 14px;
+      outline:none;
+    }
+    input:focus{
+      border-color: rgba(32,246,255,.45);
+      box-shadow: 0 0 0 4px rgba(32,246,255,.10);
+    }
+
+    .danger{
+      border:1px solid rgba(255,255,255,.18);
+      border-radius: 16px;
+      padding: 10px 12px;
+      font-weight: 850;
+      cursor:pointer;
+      color: var(--txt);
+      background: rgba(255,255,255,.06);
+    }
   </style>
 </head>
-<body>
+
+<body class="grain">
   <div class="wrap">
+    <div class="top">
+      <div>
+        <h1 class="title">Streak Alarm 🔥</h1>
+        <p class="subtitle">Pick a friend → type your custom brainrot → SEND. (Discord pings go brrrr)</p>
+      </div>
+      <div class="badgeRow">
+        <div class="badge">📱 Add to Home Screen = “app”</div>
+        <div class="badge">🧠 Random brainrot button</div>
+      </div>
+    </div>
+
     <div class="card">
-      <h1>Streak Alarm 🔥</h1>
-      <p>Tap a button to remind someone to keep the TikTok streak alive.</p>
+      <div id="buttons" class="grid"></div>
 
-      <div class="grid" id="buttons"></div>
+      <div class="compose" id="composeBox" style="display:none;">
+        <div class="composeHeader">
+          <div class="who">Target: <span id="targetName">—</span></div>
+          <div class="meta">
+            <span id="charCount">0/220</span>
+            <span>•</span>
+            <span id="statusText">ready to yap</span>
+          </div>
+        </div>
 
-      <div class="toast ok" id="toastOk">Sent ✅</div>
-      <div class="toast bad" id="toastBad">Failed ❌ (check webhook URL + permissions)</div>
+        <textarea id="msg" maxlength="220" placeholder="Type a custom message…"></textarea>
 
-      <div class="small">
-        Tip: Add this page to your phone home screen for “app-like” feel (Share → Add to Home Screen).
+        <div class="row">
+          <div class="chipRow" id="chips"></div>
+          <div class="actions">
+            <button class="ghost" id="randomBtn" type="button">🎲 Random brainrot</button>
+            <button class="send" id="sendBtn" type="button">SEND 🔊</button>
+          </div>
+        </div>
+
+        <div class="toast ok" id="toastOk">Sent ✅ (streak secured… for now)</div>
+        <div class="toast bad" id="toastBad">Failed ❌ (check webhook + channel permissions)</div>
+
+        <div class="hint">
+          If updates don’t show up: hard refresh (Ctrl/Cmd+Shift+R) or open in incognito.
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div>
+        <div class="who">Add a new button (local to THIS device)</div>
+        <div class="hint">
+          This saves to your browser only. For everyone to get the new person, edit the repo + commit.
+        </div>
+
+        <div class="addRow">
+          <input id="newName" placeholder="Name (e.g. Kevin)" />
+          <input id="newId" placeholder="Discord User ID (optional)" />
+          <input id="newEmoji" placeholder="Emoji (e.g. 🔥)" />
+          <button class="send span2" id="addBtn" type="button">ADD ➕</button>
+        </div>
+
+        <div class="row" style="margin-top:12px;">
+          <div class="meta" id="savedNote">Saved buttons: —</div>
+          <button class="danger" id="resetBtn" type="button">Reset saved buttons</button>
+        </div>
       </div>
     </div>
   </div>
@@ -45,72 +322,257 @@
     // 🔧 PASTE YOUR DISCORD WEBHOOK URL HERE:
     const WEBHOOK_URL = "https://discord.com/api/webhooks/1453136120844914829/Y7J65wVP9JhW1Ck1jsK2cfTjxe3QA21o1JFzxn5fDciBxPdJosgYEwYlimuM-EjRVKGA";
 
-    // 👇 Add your friends here (replace ids with real Discord user IDs)
-    const friends = [
-      { name: "Weibin", id: "280014148799168512", emoji: "🔥" },
-      { name: "Xiang Yue",  id: "302807965025697793", emoji: "⚡" },
-      { name: "Emberlene",id: "698136734130634813", emoji: "🎯" },
-      { name: "Jonathan",id: "231645990942146560", emoji: "🔥🔥" },
-      { name: "Group",id: null,               emoji: "📣" } // no mention, posts generic message
+    // Default buttons (these ship with the site for everyone)
+    const defaultFriends = [
+      { name: "Weibin",    id: "280014148799168512", emoji: "🔥" },
+      { name: "Xiang Yue", id: "302807965025697793", emoji: "⚡" },
+      { name: "Emberlene", id: "698136734130634813", emoji: "🎯" },
+      { name: "Jonathan",  id: "231645990942146560", emoji: "🔥🔥" },
+      { name: "Group",     id: null,                 emoji: "📣" }
     ];
 
+    // Brainrot presets (tap to append)
+    const chips = [
+      "streak check rn 😤",
+      "don’t fumble the streak bro 💀",
+      "OPEN TIKTOK. NOW. 🫵",
+      "lock in. streak on life support 🫡",
+      "streak is in ICU 🚑",
+      "we are NOT losing today 🧠🔥",
+      "this is your sign fr fr",
+      "hello?? STREAK??"
+    ];
+
+    // Random brainrot button uses these
     const messagePool = [
-      "STREAK CHECK! Open TikTok rn 😤",
-      "Don’t you dare break the streak 😭",
-      "Quick ping — streak survival time ✅",
-      "Go go go… streak on life support 🚑",
-      "Friendly reminder: streak > sleep 🫡"
+      "STREAK CHECK. Open TikTok rn 😤",
+      "don’t you dare break the streak 😭",
+      "lock in bestie, streak time ✅",
+      "streak is lowkey screaming for help 🚑",
+      "friendly ping: streak > sleep 🫡",
+      "we are so cooked if you forget 💀"
     ];
 
-    function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+    const STORAGE_KEY = "streakAlarmFriends_v1";
 
-    function showToast(el) {
+    const buttonsEl = document.getElementById("buttons");
+    const composeBox = document.getElementById("composeBox");
+    const targetNameEl = document.getElementById("targetName");
+    const msgEl = document.getElementById("msg");
+    const chipsEl = document.getElementById("chips");
+    const charCountEl = document.getElementById("charCount");
+    const statusTextEl = document.getElementById("statusText");
+    const toastOk = document.getElementById("toastOk");
+    const toastBad = document.getElementById("toastBad");
+    const randomBtn = document.getElementById("randomBtn");
+    const sendBtn = document.getElementById("sendBtn");
+
+    const newNameEl = document.getElementById("newName");
+    const newIdEl = document.getElementById("newId");
+    const newEmojiEl = document.getElementById("newEmoji");
+    const addBtn = document.getElementById("addBtn");
+    const resetBtn = document.getElementById("resetBtn");
+    const savedNote = document.getElementById("savedNote");
+
+    let selected = null;
+    let friends = loadFriends();
+
+    function pick(arr){ return arr[Math.floor(Math.random() * arr.length)]; }
+
+    function showToast(el){
       el.style.display = "block";
       clearTimeout(el._t);
       el._t = setTimeout(() => el.style.display = "none", 1800);
     }
 
-    async function sendReminder(friend) {
-      if (!WEBHOOK_URL || WEBHOOK_URL.includes("PASTE_YOUR_WEBHOOK_URL_HERE")) {
-        alert("Paste your Discord webhook URL into the code first.");
-        return;
-      }
+    function updateCounter(){
+      const n = msgEl.value.length;
+      charCountEl.textContent = `${n}/220`;
+      statusTextEl.textContent = n === 0 ? "ready to yap" : "locked in";
+    }
 
-      const msg = pick(messagePool);
+    function sanitizeText(s){
+      return s
+        .replaceAll("@everyone", "@\u200beveryone")
+        .replaceAll("@here", "@\u200bhere");
+    }
+
+    function ensureWebhook(){
+      if (!WEBHOOK_URL || WEBHOOK_URL.includes("https://discord.com/api/webhooks/1453136120844914829/Y7J65wVP9JhW1Ck1jsK2cfTjxe3QA21o1JFzxn5fDciBxPdJosgYEwYlimuM-EjRVKGA")) {
+        alert("Paste your Discord webhook URL into WEBHOOK_URL in the code first.");
+        return false;
+      }
+      return true;
+    }
+
+    async function sendToDiscord(friend, text){
       const mention = friend.id ? `<@${friend.id}>` : "";
+      const cleaned = sanitizeText(text.trim());
+
       const content = friend.id
-        ? `${mention} ${friend.emoji} ${msg}`
-        : `📣 ${msg} (anyone who hasn’t checked the streak… this is your sign)`;
+        ? `${mention} ${friend.emoji} ${cleaned}`
+        : `📣 ${cleaned}`;
 
       const payload = {
         content,
-        // Make sure only the intended user gets pinged (and avoid @everyone/@here)
+        // Only allow mentioning the selected user (and block @everyone/@here)
         allowed_mentions: friend.id ? { parse: [], users: [friend.id] } : { parse: [] }
       };
 
-      try {
-        const res = await fetch(WEBHOOK_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
+      const res = await fetch(WEBHOOK_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) throw new Error("Webhook request failed");
+    }
+
+    function renderButtons(){
+      buttonsEl.innerHTML = "";
+      friends.forEach(friend => {
+        const btn = document.createElement("button");
+        btn.className = "btn";
+        btn.innerHTML = `${friend.emoji} Ping ${friend.name}<span class="sub">tap → custom message</span>`;
+        btn.addEventListener("click", () => selectFriend(friend, btn));
+        buttonsEl.appendChild(btn);
+      });
+
+      const customCount = Math.max(0, friends.length - defaultFriends.length);
+      savedNote.textContent = `Saved buttons: ${customCount} added on this device`;
+    }
+
+    function selectFriend(friend, btnEl){
+      selected = friend;
+      document.querySelectorAll(".btn").forEach(b => b.classList.remove("selected"));
+      btnEl.classList.add("selected");
+
+      composeBox.style.display = "block";
+      targetNameEl.textContent = friend.name;
+
+      // Prefill something fun if empty
+      if (!msgEl.value.trim()) msgEl.value = pick(messagePool);
+      updateCounter();
+
+      msgEl.focus();
+      msgEl.setSelectionRange(msgEl.value.length, msgEl.value.length);
+    }
+
+    function renderChips(){
+      chipsEl.innerHTML = "";
+      chips.forEach(text => {
+        const c = document.createElement("div");
+        c.className = "chip";
+        c.textContent = text;
+        c.addEventListener("click", () => {
+          const current = msgEl.value.trim();
+          msgEl.value = current ? `${current} ${text}` : text;
+          updateCounter();
+          msgEl.focus();
         });
-        if (!res.ok) throw new Error("Webhook request failed");
-        showToast(document.getElementById("toastOk"));
-      } catch (e) {
+        chipsEl.appendChild(c);
+      });
+    }
+
+    randomBtn.addEventListener("click", () => {
+      msgEl.value = pick(messagePool);
+      updateCounter();
+      msgEl.focus();
+    });
+
+    sendBtn.addEventListener("click", async () => {
+      if (!ensureWebhook()) return;
+      if (!selected) { alert("Pick a friend first."); return; }
+
+      const text = (msgEl.value.trim() || pick(messagePool));
+
+      try{
+        sendBtn.disabled = true;
+        sendBtn.textContent = "SENDING…";
+        await sendToDiscord(selected, text);
+        showToast(toastOk);
+      }catch(e){
         console.error(e);
-        showToast(document.getElementById("toastBad"));
+        showToast(toastBad);
+      }finally{
+        sendBtn.disabled = false;
+        sendBtn.textContent = "SEND 🔊";
+      }
+    });
+
+    msgEl.addEventListener("input", updateCounter);
+
+    // ---- Add new person UI (local to device) ----
+    function normalizeEmoji(e){
+      const s = (e || "").trim();
+      return s || "✨";
+    }
+
+    function loadFriends(){
+      try{
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return [...defaultFriends];
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed)) return [...defaultFriends];
+        // Merge: defaults first, then custom (avoid duplicates by name+id)
+        const merged = [...defaultFriends];
+        parsed.forEach(p => {
+          if (!p || !p.name) return;
+          const exists = merged.some(m => (m.name === p.name && String(m.id||"") === String(p.id||"")));
+          if (!exists) merged.push({ name: String(p.name), id: p.id ? String(p.id) : null, emoji: normalizeEmoji(p.emoji) });
+        });
+        return merged;
+      }catch{
+        return [...defaultFriends];
       }
     }
 
-    const buttons = document.getElementById("buttons");
-    friends.forEach(friend => {
-      const btn = document.createElement("button");
-      btn.textContent = `${friend.emoji} Ping ${friend.name}`;
-      btn.onclick = () => sendReminder(friend);
-      buttons.appendChild(btn);
+    function saveCustomFriends(){
+      // Only store custom (non-default) ones
+      const custom = friends.slice(defaultFriends.length);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(custom));
+    }
+
+    addBtn.addEventListener("click", () => {
+      const name = (newNameEl.value || "").trim();
+      const id = (newIdEl.value || "").trim();
+      const emoji = normalizeEmoji(newEmojiEl.value);
+
+      if (!name){
+        alert("Name is required.");
+        return;
+      }
+
+      // prevent exact dupes
+      const exists = friends.some(f => f.name.toLowerCase() === name.toLowerCase() && String(f.id||"") === String(id||""));
+      if (exists){
+        alert("That person already exists.");
+        return;
+      }
+
+      friends.push({ name, id: id || null, emoji });
+      saveCustomFriends();
+      renderButtons();
+
+      newNameEl.value = "";
+      newIdEl.value = "";
+      newEmojiEl.value = "";
     });
+
+    resetBtn.addEventListener("click", () => {
+      localStorage.removeItem(STORAGE_KEY);
+      friends = [...defaultFriends];
+      selected = null;
+      composeBox.style.display = "none";
+      msgEl.value = "";
+      renderButtons();
+      updateCounter();
+    });
+
+    // init
+    renderButtons();
+    renderChips();
+    updateCounter();
   </script>
 </body>
-
 </html>
-
