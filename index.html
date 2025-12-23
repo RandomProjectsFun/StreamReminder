@@ -184,6 +184,7 @@
       box-shadow: 0 12px 24px rgba(0,0,0,.35);
     }
     .send:active{ transform: scale(.985); }
+    .send:disabled{ opacity:.65; cursor:not-allowed; }
 
     .ghost{
       border:1px solid rgba(255,255,255,.18);
@@ -194,6 +195,7 @@
       color: var(--txt);
       background: rgba(255,255,255,.06);
     }
+    .ghost:active{ transform: scale(.985); }
 
     .meta{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; color: var(--muted); font-size: 12px; }
     .toast{
@@ -248,6 +250,108 @@
       color: var(--txt);
       background: rgba(255,255,255,.06);
     }
+
+    /* ---- GIF PICKER MODAL ---- */
+    .modalBack{
+      position:fixed; inset:0;
+      background: rgba(0,0,0,.65);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding: 18px;
+      z-index: 9999;
+    }
+    .modal{
+      width:min(920px, 100%);
+      max-height: 82vh;
+      overflow:hidden;
+      border-radius: 22px;
+      border: 1px solid rgba(255,255,255,.16);
+      background: rgba(10,10,20,.82);
+      box-shadow: 0 24px 80px rgba(0,0,0,.65);
+      backdrop-filter: blur(16px);
+      position:relative;
+    }
+    .modalHeader{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      padding: 14px 14px 10px;
+      border-bottom: 1px solid rgba(255,255,255,.12);
+      background: linear-gradient(90deg, rgba(32,246,255,.10), rgba(255,43,214,.08));
+    }
+    .modalTitle{
+      font-weight: 950;
+      letter-spacing:.2px;
+      display:flex;
+      align-items:center;
+      gap:10px;
+    }
+    .modalBody{
+      padding: 12px 14px 14px;
+      overflow:auto;
+      max-height: calc(82vh - 58px);
+    }
+    .modalControls{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+      justify-content:space-between;
+      margin-bottom: 10px;
+    }
+    .ctrlLeft{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; width:100%; }
+    .ctrlLeft input{ flex: 1; min-width: 240px; }
+    .gifGrid{
+      display:grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+    @media (min-width:720px){
+      .gifGrid{ grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    }
+    .gifTile{
+      border-radius: 16px;
+      overflow:hidden;
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.05);
+      cursor:pointer;
+      position:relative;
+    }
+    .gifTile:hover{
+      border-color: rgba(32,246,255,.55);
+      box-shadow: 0 0 18px rgba(32,246,255,.12);
+    }
+    .gifTile img{
+      width:100%;
+      display:block;
+    }
+    .tiny{
+      font-size:12px;
+      color: var(--muted);
+    }
+
+    .gifPreview{
+      display:none;
+      margin-top:10px;
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.05);
+      border-radius: 16px;
+      padding: 10px;
+      gap: 10px;
+      align-items:center;
+    }
+    .gifPreview img{
+      width:72px;
+      height:72px;
+      object-fit:cover;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,.12);
+    }
+    .gifPreview .label{
+      font-weight: 850;
+    }
   </style>
 </head>
 
@@ -256,11 +360,11 @@
     <div class="top">
       <div>
         <h1 class="title">Streak Alarm 🔥</h1>
-        <p class="subtitle">Pick a friend → type your custom brainrot → SEND. (Discord pings go brrrr)</p>
+        <p class="subtitle">Pick a friend → write your custom brainrot → add a GIF → SEND.</p>
       </div>
       <div class="badgeRow">
         <div class="badge">📱 Add to Home Screen = “app”</div>
-        <div class="badge">🧠 Random brainrot button</div>
+        <div class="badge">🎞️ Tenor GIF picker</div>
       </div>
     </div>
 
@@ -282,9 +386,19 @@
         <div class="row">
           <div class="chipRow" id="chips"></div>
           <div class="actions">
+            <button class="ghost" id="gifBtn" type="button">🎞️ GIFs</button>
             <button class="ghost" id="randomBtn" type="button">🎲 Random brainrot</button>
             <button class="send" id="sendBtn" type="button">SEND 🔊</button>
           </div>
+        </div>
+
+        <div class="gifPreview" id="gifPreview">
+          <img id="gifPreviewImg" alt="selected gif" />
+          <div style="flex:1;">
+            <div class="label">GIF selected ✅</div>
+            <div class="tiny" id="gifPreviewTxt">will send with your reminder</div>
+          </div>
+          <button class="danger" id="clearGifBtn" type="button">Clear</button>
         </div>
 
         <div class="toast ok" id="toastOk">Sent ✅ (streak secured… for now)</div>
@@ -318,9 +432,44 @@
     </div>
   </div>
 
+  <!-- GIF PICKER MODAL -->
+  <div class="modalBack" id="gifModalBack" role="dialog" aria-modal="true">
+    <div class="modal" aria-label="GIF Picker">
+      <div class="modalHeader">
+        <div class="modalTitle">🎞️ Tenor GIF Picker <span class="tiny">choose your weapon</span></div>
+        <button class="danger" id="gifCloseBtn" type="button">Close ✖</button>
+      </div>
+      <div class="modalBody">
+        <div class="modalControls">
+          <div class="ctrlLeft">
+            <input id="gifSearch" placeholder="Search GIFs (e.g. lock in, streak, brainrot…)" />
+            <button class="ghost" id="gifSearchBtn" type="button">Search</button>
+            <button class="ghost" id="gifTrendingBtn" type="button">Trending</button>
+            <button class="ghost" id="gifRandomBtn" type="button">Random 🧠</button>
+          </div>
+          <div class="tiny" id="gifStatus">ready</div>
+        </div>
+
+        <div class="gifGrid" id="gifResults"></div>
+        <div class="hint tiny" style="margin-top:10px;">
+          Tip: “Random 🧠” uses your search term. If empty, it uses trending.
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script>
-    // 🔧 PASTE YOUR DISCORD WEBHOOK URL HERE:
+    // =========================
+    // CONFIG
+    // =========================
+
+    // 🔧 1) PASTE YOUR DISCORD WEBHOOK URL HERE:
     const WEBHOOK_URL = "https://discord.com/api/webhooks/1453136120844914829/Y7J65wVP9JhW1Ck1jsK2cfTjxe3QA21o1JFzxn5fDciBxPdJosgYEwYlimuM-EjRVKGA";
+
+    // 🔧 2) Tenor API key:
+    // Demo key works but is rate-limited. You can swap to your own key later.
+    const TENOR_KEY = "LIVDSRZULELA";
+    const TENOR_LIMIT = 24;
 
     // Default buttons (these ship with the site for everyone)
     const defaultFriends = [
@@ -343,7 +492,7 @@
       "hello?? STREAK??"
     ];
 
-    // Random brainrot button uses these
+    // Random brainrot message button
     const messagePool = [
       "STREAK CHECK. Open TikTok rn 😤",
       "don’t you dare break the streak 😭",
@@ -355,6 +504,9 @@
 
     const STORAGE_KEY = "streakAlarmFriends_v1";
 
+    // =========================
+    // DOM
+    // =========================
     const buttonsEl = document.getElementById("buttons");
     const composeBox = document.getElementById("composeBox");
     const targetNameEl = document.getElementById("targetName");
@@ -367,6 +519,12 @@
     const randomBtn = document.getElementById("randomBtn");
     const sendBtn = document.getElementById("sendBtn");
 
+    const gifBtn = document.getElementById("gifBtn");
+    const gifPreview = document.getElementById("gifPreview");
+    const gifPreviewImg = document.getElementById("gifPreviewImg");
+    const gifPreviewTxt = document.getElementById("gifPreviewTxt");
+    const clearGifBtn = document.getElementById("clearGifBtn");
+
     const newNameEl = document.getElementById("newName");
     const newIdEl = document.getElementById("newId");
     const newEmojiEl = document.getElementById("newEmoji");
@@ -374,9 +532,26 @@
     const resetBtn = document.getElementById("resetBtn");
     const savedNote = document.getElementById("savedNote");
 
+    // GIF modal
+    const gifModalBack = document.getElementById("gifModalBack");
+    const gifCloseBtn = document.getElementById("gifCloseBtn");
+    const gifSearchEl = document.getElementById("gifSearch");
+    const gifSearchBtn = document.getElementById("gifSearchBtn");
+    const gifTrendingBtn = document.getElementById("gifTrendingBtn");
+    const gifRandomBtn = document.getElementById("gifRandomBtn");
+    const gifResultsEl = document.getElementById("gifResults");
+    const gifStatusEl = document.getElementById("gifStatus");
+
+    // =========================
+    // STATE
+    // =========================
     let selected = null;
     let friends = loadFriends();
+    let selectedGifUrl = ""; // GIF to send as embed
 
+    // =========================
+    // HELPERS
+    // =========================
     function pick(arr){ return arr[Math.floor(Math.random() * arr.length)]; }
 
     function showToast(el){
@@ -391,6 +566,7 @@
       statusTextEl.textContent = n === 0 ? "ready to yap" : "locked in";
     }
 
+    // Avoid accidental @everyone/@here spam
     function sanitizeText(s){
       return s
         .replaceAll("@everyone", "@\u200beveryone")
@@ -405,6 +581,21 @@
       return true;
     }
 
+    function setGif(url){
+      selectedGifUrl = url || "";
+      if (selectedGifUrl){
+        gifPreviewImg.src = selectedGifUrl;
+        gifPreviewTxt.textContent = "will send with your reminder";
+        gifPreview.style.display = "flex";
+      } else {
+        gifPreviewImg.removeAttribute("src");
+        gifPreview.style.display = "none";
+      }
+    }
+
+    // =========================
+    // DISCORD SEND
+    // =========================
     async function sendToDiscord(friend, text){
       const mention = friend.id ? `<@${friend.id}>` : "";
       const cleaned = sanitizeText(text.trim());
@@ -415,9 +606,12 @@
 
       const payload = {
         content,
-        // Only allow mentioning the selected user (and block @everyone/@here)
         allowed_mentions: friend.id ? { parse: [], users: [friend.id] } : { parse: [] }
       };
+
+      if (selectedGifUrl){
+        payload.embeds = [{ image: { url: selectedGifUrl } }];
+      }
 
       const res = await fetch(WEBHOOK_URL, {
         method: "POST",
@@ -428,6 +622,9 @@
       if (!res.ok) throw new Error("Webhook request failed");
     }
 
+    // =========================
+    // FRIEND BUTTONS UI
+    // =========================
     function renderButtons(){
       buttonsEl.innerHTML = "";
       friends.forEach(friend => {
@@ -450,7 +647,6 @@
       composeBox.style.display = "block";
       targetNameEl.textContent = friend.name;
 
-      // Prefill something fun if empty
       if (!msgEl.value.trim()) msgEl.value = pick(messagePool);
       updateCounter();
 
@@ -480,6 +676,8 @@
       msgEl.focus();
     });
 
+    clearGifBtn.addEventListener("click", () => setGif(""));
+
     sendBtn.addEventListener("click", async () => {
       if (!ensureWebhook()) return;
       if (!selected) { alert("Pick a friend first."); return; }
@@ -491,6 +689,10 @@
         sendBtn.textContent = "SENDING…";
         await sendToDiscord(selected, text);
         showToast(toastOk);
+
+        // Optional: clear gif after send (comment out if you want it to persist)
+        setGif("");
+
       }catch(e){
         console.error(e);
         showToast(toastBad);
@@ -502,7 +704,9 @@
 
     msgEl.addEventListener("input", updateCounter);
 
-    // ---- Add new person UI (local to device) ----
+    // =========================
+    // ADD NEW FRIEND (LOCAL)
+    // =========================
     function normalizeEmoji(e){
       const s = (e || "").trim();
       return s || "✨";
@@ -514,7 +718,7 @@
         if (!raw) return [...defaultFriends];
         const parsed = JSON.parse(raw);
         if (!Array.isArray(parsed)) return [...defaultFriends];
-        // Merge: defaults first, then custom (avoid duplicates by name+id)
+
         const merged = [...defaultFriends];
         parsed.forEach(p => {
           if (!p || !p.name) return;
@@ -528,7 +732,6 @@
     }
 
     function saveCustomFriends(){
-      // Only store custom (non-default) ones
       const custom = friends.slice(defaultFriends.length);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(custom));
     }
@@ -543,7 +746,6 @@
         return;
       }
 
-      // prevent exact dupes
       const exists = friends.some(f => f.name.toLowerCase() === name.toLowerCase() && String(f.id||"") === String(id||""));
       if (exists){
         alert("That person already exists.");
@@ -565,15 +767,168 @@
       selected = null;
       composeBox.style.display = "none";
       msgEl.value = "";
+      setGif("");
       renderButtons();
       updateCounter();
     });
 
-    // init
+    // =========================
+    // TENOR GIF PICKER
+    // =========================
+    function openGifModal(){
+      gifModalBack.style.display = "flex";
+      gifSearchEl.focus();
+      // Load trending if empty results
+      if (!gifResultsEl.children.length){
+        loadTrending();
+      }
+    }
+
+    function closeGifModal(){
+      gifModalBack.style.display = "none";
+    }
+
+    gifBtn.addEventListener("click", () => openGifModal());
+    gifCloseBtn.addEventListener("click", () => closeGifModal());
+    gifModalBack.addEventListener("click", (e) => {
+      if (e.target === gifModalBack) closeGifModal();
+    });
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && gifModalBack.style.display === "flex") closeGifModal();
+    });
+
+    function setGifStatus(s){
+      gifStatusEl.textContent = s;
+    }
+
+    function getGifUrlFromTenorItem(item){
+      // Prefer "gif", fallback to "tinygif"
+      return item?.media_formats?.gif?.url || item?.media_formats?.tinygif?.url || "";
+    }
+
+    function renderGifResults(items){
+      gifResultsEl.innerHTML = "";
+      items.forEach(item => {
+        const url = getGifUrlFromTenorItem(item);
+        if (!url) return;
+
+        const tile = document.createElement("div");
+        tile.className = "gifTile";
+
+        const img = document.createElement("img");
+        img.src = url;
+        img.loading = "lazy";
+        img.alt = item?.content_description || "gif";
+
+        tile.appendChild(img);
+        tile.addEventListener("click", () => {
+          setGif(url);
+          closeGifModal();
+        });
+
+        gifResultsEl.appendChild(tile);
+      });
+
+      if (!gifResultsEl.children.length){
+        gifResultsEl.innerHTML = `<div class="hint">No GIFs found. Try another search.</div>`;
+      }
+    }
+
+    async function tenorFetch(path, params){
+      const base = "https://tenor.googleapis.com/v2";
+      const usp = new URLSearchParams({
+        key: TENOR_KEY,
+        limit: String(TENOR_LIMIT),
+        media_filter: "gif",
+        contentfilter: "low",
+        ...params
+      });
+      const url = `${base}${path}?${usp.toString()}`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("Tenor request failed");
+      return await res.json();
+    }
+
+    async function loadTrending(){
+      try{
+        setGifStatus("loading trending…");
+        const data = await tenorFetch("/featured", { });
+        const items = Array.isArray(data.results) ? data.results : [];
+        renderGifResults(items);
+        setGifStatus("trending loaded");
+      }catch(e){
+        console.error(e);
+        setGifStatus("failed (try again)");
+        gifResultsEl.innerHTML = `<div class="hint">Tenor request failed. Try again.</div>`;
+      }
+    }
+
+    async function searchTenor(q){
+      try{
+        setGifStatus("searching…");
+        const data = await tenorFetch("/search", { q: q });
+        const items = Array.isArray(data.results) ? data.results : [];
+        renderGifResults(items);
+        setGifStatus(`results for: ${q}`);
+      }catch(e){
+        console.error(e);
+        setGifStatus("failed (try again)");
+        gifResultsEl.innerHTML = `<div class="hint">Tenor search failed. Try again.</div>`;
+      }
+    }
+
+    async function randomGif(){
+      // Uses your search term; if empty, uses trending
+      const q = (gifSearchEl.value || "").trim();
+      try{
+        setGifStatus("rolling the brainrot dice…");
+        const data = q
+          ? await tenorFetch("/search", { q: q })
+          : await tenorFetch("/featured", { });
+
+        const items = Array.isArray(data.results) ? data.results : [];
+        if (!items.length) {
+          setGifStatus("no results :(");
+          return;
+        }
+        const chosen = items[Math.floor(Math.random() * items.length)];
+        const url = getGifUrlFromTenorItem(chosen);
+        if (!url) {
+          setGifStatus("no gif url :(");
+          return;
+        }
+        setGif(url);
+        closeGifModal();
+      }catch(e){
+        console.error(e);
+        setGifStatus("failed (try again)");
+      }
+    }
+
+    gifTrendingBtn.addEventListener("click", () => loadTrending());
+    gifSearchBtn.addEventListener("click", async () => {
+      const q = (gifSearchEl.value || "").trim();
+      if (!q) return loadTrending();
+      await searchTenor(q);
+    });
+    gifRandomBtn.addEventListener("click", () => randomGif());
+
+    gifSearchEl.addEventListener("keydown", async (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        const q = (gifSearchEl.value || "").trim();
+        if (!q) return loadTrending();
+        await searchTenor(q);
+      }
+    });
+
+    // =========================
+    // INIT
+    // =========================
     renderButtons();
     renderChips();
     updateCounter();
   </script>
 </body>
 </html>
-
