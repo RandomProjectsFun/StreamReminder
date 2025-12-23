@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Streak Alarm 🔥</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 0; background: #0b0f19; color: #e9eefc; }
+    .wrap { max-width: 720px; margin: 0 auto; padding: 24px; }
+    .card { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.10); border-radius: 18px; padding: 18px; }
+    h1 { margin: 0 0 6px; font-size: 28px; }
+    p { margin: 0 0 16px; opacity: 0.9; }
+    .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 14px; }
+    button {
+      border: 0; border-radius: 16px; padding: 14px 12px; cursor: pointer;
+      background: rgba(255,255,255,0.12); color: #e9eefc; font-size: 16px; font-weight: 650;
+      transition: transform 0.06s ease, background 0.15s ease;
+    }
+    button:active { transform: scale(0.98); }
+    button:hover { background: rgba(255,255,255,0.16); }
+    .small { font-size: 13px; opacity: 0.85; margin-top: 14px; line-height: 1.35; }
+    .toast { margin-top: 12px; padding: 10px 12px; border-radius: 12px; display: none; }
+    .ok { background: rgba(34,197,94,0.18); border: 1px solid rgba(34,197,94,0.35); }
+    .bad { background: rgba(239,68,68,0.18); border: 1px solid rgba(239,68,68,0.35); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>Streak Alarm 🔥</h1>
+      <p>Tap a button to remind someone to keep the TikTok streak alive.</p>
+
+      <div class="grid" id="buttons"></div>
+
+      <div class="toast ok" id="toastOk">Sent ✅</div>
+      <div class="toast bad" id="toastBad">Failed ❌ (check webhook URL + permissions)</div>
+
+      <div class="small">
+        Tip: Add this page to your phone home screen for “app-like” feel (Share → Add to Home Screen).
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 🔧 PASTE YOUR DISCORD WEBHOOK URL HERE:
+    const WEBHOOK_URL = "PASTE_YOUR_WEBHOOK_URL_HERE";
+
+    // 👇 Add your friends here (replace ids with real Discord user IDs)
+    const friends = [
+      { name: "Alex", id: "111111111111111111", emoji: "🔥" },
+      { name: "Sam",  id: "222222222222222222", emoji: "⚡" },
+      { name: "Jamie",id: "333333333333333333", emoji: "🎯" },
+      { name: "Group",id: null,               emoji: "📣" } // no mention, posts generic message
+    ];
+
+    const messagePool = [
+      "STREAK CHECK! Open TikTok rn 😤",
+      "Don’t you dare break the streak 😭",
+      "Quick ping — streak survival time ✅",
+      "Go go go… streak on life support 🚑",
+      "Friendly reminder: streak > sleep 🫡"
+    ];
+
+    function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+    function showToast(el) {
+      el.style.display = "block";
+      clearTimeout(el._t);
+      el._t = setTimeout(() => el.style.display = "none", 1800);
+    }
+
+    async function sendReminder(friend) {
+      if (!WEBHOOK_URL || WEBHOOK_URL.includes("PASTE_YOUR_WEBHOOK_URL_HERE")) {
+        alert("Paste your Discord webhook URL into the code first.");
+        return;
+      }
+
+      const msg = pick(messagePool);
+      const mention = friend.id ? `<@${friend.id}>` : "";
+      const content = friend.id
+        ? `${mention} ${friend.emoji} ${msg}`
+        : `📣 ${msg} (anyone who hasn’t checked the streak… this is your sign)`;
+
+      const payload = {
+        content,
+        // Make sure only the intended user gets pinged (and avoid @everyone/@here)
+        allowed_mentions: friend.id ? { parse: [], users: [friend.id] } : { parse: [] }
+      };
+
+      try {
+        const res = await fetch(WEBHOOK_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+        if (!res.ok) throw new Error("Webhook request failed");
+        showToast(document.getElementById("toastOk"));
+      } catch (e) {
+        console.error(e);
+        showToast(document.getElementById("toastBad"));
+      }
+    }
+
+    const buttons = document.getElementById("buttons");
+    friends.forEach(friend => {
+      const btn = document.createElement("button");
+      btn.textContent = `${friend.emoji} Ping ${friend.name}`;
+      btn.onclick = () => sendReminder(friend);
+      buttons.appendChild(btn);
+    });
+  </script>
+</body>
+</html>
